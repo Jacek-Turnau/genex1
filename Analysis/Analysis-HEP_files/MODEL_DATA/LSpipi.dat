@@ -1,0 +1,59 @@
+#Confuguration file with Lebiedowicz & Szczurek model parameters for reaction p+p->p+p+pi^{+}+pi^{-}
+
+###Reaction data
+#number of outgoing particles
+#nop = 4
+#number of incoming particles
+#nip = 2
+
+
+###Model parametres (Matrix element)
+
+#regge intercept
+#rintc0 = 1.088
+
+rintc0 = 1.0808
+rintc1 = 0.5479
+rintc2 = 0.5479
+
+#regge  traj. slope
+rslope0 = 0.25
+rslope1 = 0.93
+rslope2 = 0.93
+
+#traj. phase (real part of pomeron, f, rho))
+areal0 = 0.0
+areal1 = -0.860895
+areal2 = 1.16158
+
+#pomeron,f,rho couplings [mb]
+Cregge0 = 13.63
+Cregge1 = 31.79
+Cregge2 = 4.23
+
+#formfactor slope
+B00 = 5.5
+B01 = 4.0
+B02 = 4.0
+
+#regge scale
+S0 = 1.0
+
+#low mass  cutoff slope
+aa = 0.2 
+
+#low mass threshold cut
+W0 = 2.0
+
+##parameters for rescattering correction
+
+#proton proton total x-section GeV-2 ( 40.0/0.3894 )
+sigma_tot = 102.7221366204417
+
+#slope of eleastic pp x-section
+B_elastic = 14.0
+
+Beff = 4.0
+
+Lambda2 = 1.0  #GeV
+#Lambda2 = 2.2  #GeV  Khoze al.

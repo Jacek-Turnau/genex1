@@ -1,0 +1,301 @@
+############################################################
+# GenEx, Generator configuration file
+############################################################
+
+
+############################################Stand-alone program configuration
+#Total number of events to be generated
+NumberOfEventsToGenerate  = 20000
+
+
+############################################SetUp integration method/randorm number generator
+# 1 - FOAM     (adaptive Monte Carlo integrator) WARNING: Events have weight = 1.
+# 2 - TRandom3 (use uniform random numbers) 	 WARNING: Events are weighted.
+
+IntegratorSetup = 1
+
+############################################Random number generator seed
+seed = 4357
+
+############################################General random number generation/integration parameters 
+
+############################################Foam parameters
+
+#nCells   = 10000   # Number of Cells - exact calculations
+nCells  = 1000    # Number of Cells - for testing
+#nSampl   = 10000   # Number of MC events per cell in build-up - exact calculations
+nSampl  = 1000    # Number of MC events per cell in build-up - for testing
+nBin     = 12      # Number of bins in build-up
+OptRej   = 1   	   # =0, weighted events;  =1, wt=1 events
+#OptRej   = 0   	   # =0, weighted events;  =1, wt=1 events
+OptDrive = 2       # (D=2) Option, type of Drive =0,1,2 for TrueVol,Sigma,WtMax
+EvPerBin = 25      # Maximum events (equiv.) per bin in buid-up
+MaxWtRej = 2.0     # Maximum wt for rejection, for OptRej=1
+Chat	 = 1   	   # Chat level
+
+################################################Saving events in file
+####Files are saved as root file. For reading see ANALYSIS folder.
+
+#Save event data in root file (0 - NO; 1 -YES)
+#WARNING - Appropriate disc space required for data
+SaveEventDataRoot = 1
+
+##File for backup events (in root tree)
+RootEventFile = EVENTS/events.root
+
+#Save event data in XML file using LHE standard (0 - NO; 1 -YES)
+#WARNING - Appropriate disc space required for data
+SaveEventDataLHE_XML = 1
+
+##File for backup events (Les Houches Accords XML file format)
+LHEXMLEventFile = EVENTS/events.lhe 
+
+#Save event data in text file in LHE format (0 - NO; 1 -YES)
+#WARNING - Appropriate disc space required for data
+SaveEventDataLHE_TXT = 1
+
+##File for backup events (Les Houches Accords txt file format)
+LHETXTEventFile = EVENTS/events.txt
+
+
+##Log file for run
+LogFile = RunLog.log
+
+##Log for configuration of classes
+ConfigLogFile = ConfigLog.log
+
+##Use configuration only from Generator.dat (model data are not read; it is assumed they are in Generator.dat) 
+##This option is usefull when creating tests/recording configuration. In ConfigLogFile it is set to 1.
+readConfigLog = 0
+
+
+##Save data every 'backupInterval' steps
+backupInterval = 1000000
+
+
+#############################Beam setup
+#Type of frame:
+# 1 - beam collides in CM frame, only total energu in CM: tecm have to be provided
+# 2 - beam collides in LAB frame, energies of two particles have to be provided
+frameType = 1
+
+#PDG code of particle A
+idA = 2212
+EA  = 100.0
+
+#PDG codeof particle B
+idB = 2212
+EB = 100.0
+
+#Total energu in CM for frameType = 1
+tecm = 200.0
+
+##########################################################Event generation strategy
+
+##Type of strategy
+##4-body phase space (nop = 4 !!!):
+# 1 - Cylindrical Phase Space (Jadach);  
+# 2 - generation by Lebiedowicz&Szczurek prescription (limited to 4 final particles)
+# 3 - A+B->1+2+3 reaction
+# 4 - A+B->1+2+CM, then CM->3+4+...+N, assume N>1;
+
+eventGenerationStrategy = 2
+
+############################################################
+
+
+####Options for eventGenerationStrategy = 1
+
+TEventMakerCylindricalPhaseSpace::ptt = 0.4 #average transverse momentum for generated events [GeV/c]
+
+## 0 - particles are identified by PDG info; 1 -particles identified by mass; 2 - use mases and codes defined below (NOTE: there may be inconsistency between PDG codes and masses)
+TEventMakerCylindricalPhaseSpace::massIndication = 0
+
+#number of outgoing particles, at least 3: 2 + CM and CM -> 3+4+...+N
+TEventMakerCylindricalPhaseSpace::nop = 4
+
+
+##Mass setup - first two particles should be leading ones, e.g., protons
+#masses of particles if identified by mass
+TEventMakerCylindricalPhaseSpace::m1 = 0.938
+TEventMakerCylindricalPhaseSpace::m2 = 0.938
+TEventMakerCylindricalPhaseSpace::m3 = 0.139
+TEventMakerCylindricalPhaseSpace::m4 = 0.139
+
+#PDG codes of particles
+TEventMakerCylindricalPhaseSpace::id1 = 2212
+TEventMakerCylindricalPhaseSpace::id2 = 2212
+TEventMakerCylindricalPhaseSpace::id3 = 211
+TEventMakerCylindricalPhaseSpace::id4 = -211
+
+
+
+####Options for eventGenerationStrategy = 2
+
+
+##range of variables - should be not more restrictive than cuts
+TEventMaker2to4::p_min =  0.0	# min value of proton tranverse momentum if protonPtGeneration = 0, not used otherwise)
+TEventMaker2to4::p_max =  1.0	# max value of proton tranverse momentum if protonPtGeneration = 0, not used otherwise)
+TEventMaker2to4::y_min = -8.0	# min value od rapidity of centally produced particles
+TEventMaker2to4::y_max =  8.0 	# max value od rapidity of centally produced particles
+TEventMaker2to4::pmt_max = 2.0	# max value of the difference of transverse momenta of centally produced particles
+
+## 0 - particles are identified by PDG info; 1 -particles identified by mass; 2 - use mases and codes defined below (NOTE: there may be inconsistency between PDG codes and masses)
+TEventMaker2to4::massIndication = 2
+
+#masses of particles if identified by mass
+TEventMaker2to4::m1 = 0.938	#proton
+TEventMaker2to4::m2 = 0.938	#proton
+TEventMaker2to4::m3 = 0.139	#pion
+TEventMaker2to4::m4 = 0.139	#pion
+#TEventMaker2to4::m3 = 0.493	#K+-
+#TEventMaker2to4::m4 = 0.493	#K+-
+
+#PDG codes of particles
+TEventMaker2to4::id1 = 2212	#proton
+TEventMaker2to4::id2 = 2212	#proton
+TEventMaker2to4::id3 = 211	#pion+
+TEventMaker2to4::id4 = -211	#pion-
+#TEventMaker2to4::id3 = 321	#K+
+#TEventMaker2to4::id4 = -321	#K-
+
+
+#####Options for eventGenerationStrategy = 3
+
+##range of variables - should be not more restrictive than cuts 
+TEventMaker2to3::p_min =  0.0	# min value of proton tranverse momentum
+TEventMaker2to3::p_max =  2.0	# max value of proton tranverse momentum
+TEventMaker2to3::y_min = -8.0	# min value od rapidity of centally produced particles
+TEventMaker2to3::y_max =  8.0 	# max value od rapidity of centally produced particles
+
+## 0 - particles are identified by PDG info; 1 -particles identified by mass; 2 - use mases and codes defined below (NOTE: there may be inconsistency between PDG codes and masses)
+TEventMaker2to3::massIndication = 0
+
+#masses of particles if identified by mass
+TEventMaker2to3::m1 = 0.938
+TEventMaker2to3::m2 = 0.938
+TEventMaker2to3::m3 = 0.938
+
+#PDG codes of particles
+TEventMaker2to3::id1 = 2212
+TEventMaker2to3::id2 = 2212
+TEventMaker2to3::id3 = 2212
+
+#####Options for eventGenerationStrategy = 4
+
+##range of variables - should be not more restrictive than cuts 
+TEventMaker2toN::p_min =  0.0	# min value of proton tranverse momentum
+TEventMaker2toN::p_max =  2.0	# max value of proton tranverse momentum
+TEventMaker2toN::y_min = -8.0	# min value od rapidity of centally produced particles
+TEventMaker2toN::y_max =  8.0 	# max value od rapidity of centally produced particles
+
+#Central mass setup
+# 0 - use kinematic bounds for central mass (use robust exploration)
+# 1 - use specific central mass range [mass_min;mass_max] 
+# 2 - use central mass from [threshold; mass_max]
+TEventMaker2toN::centralMassOption = 2
+TEventMaker2toN::mass_min = 0.27914
+TEventMaker2toN::mass_max = 5.0
+
+## 0 - particles are identified by PDG info; 1 -particles identified by mass; 2 - use mases and codes defined below (NOTE: there may be inconsistency between PDG codes and masses)
+TEventMaker2toN::massIndication = 0
+
+#number of outgoing particles, at least 3: 2 + CM and CM -> 3+4+...+N
+TEventMaker2toN::nop = 4
+
+#masses of particles if identified by mass
+TEventMaker2toN::m1 = 0.938	#proton
+TEventMaker2toN::m2 = 0.938	#proton
+TEventMaker2toN::m3 = 0.139	#pion
+TEventMaker2toN::m4 = 0.139	#pion
+#TEventMaker2toN::m3 = 0.493	#K+
+#TEventMaker2toN::m4 = 0.493	#K-
+
+#PDG codes of particles
+TEventMaker2toN::id1 = 2212	#proton
+TEventMaker2toN::id2 = 2212	#proton
+TEventMaker2toN::id3 = 211	#pion+
+TEventMaker2toN::id4 = -211	#pion-
+#TEventMaker2toN::id3 = 321	#K+
+#TEventMaker2toN::id4 = -321	#K-
+
+#initialize decay integral(M) 0-No/1-Yes
+#It should be initailized before GetDacayPhaseSpaceIntegral() is called
+TEventMaker2toN::bIDecay = 0
+
+################################################Weight selection and configuration
+
+
+##Matrix Element - MODEL of REACTION
+#  1 - Lebiedowicz & Szczurek 2p -> 2p + pi+ + pi-
+#  2 - Lebiedowicz & Szczurek 2p -> 2p + K+ + K-
+#  3 - Phase Space Integral; ME = 1
+#  4 - Gauss matrix element exp(-alpha sum_i pt^2 )
+
+weightStrategy = 1
+
+## Parameters for weightStrategy = 1
+Model1ConfFile = MODEL_DATA/LSpipi.dat
+
+## Parameters for weightStrategy = 2
+Model2ConfFile = MODEL_DATA/LSKK.dat
+
+## Parameters for weightStrategy = 3
+Model3ConfFile = MODEL_DATA/Unit.dat
+
+## Parameters for weightStrategy = 4
+Model4ConfFile = MODEL_DATA/GaussPt.dat 
+
+
+
+###########################################################Acceptance cuts
+
+
+#Cuts application when Foam is used. 
+# This option sets different cuts for Foam exploration and generation phase.
+# It can be useful for experts.
+# 0 - the same cuts for explorationa and generation (used when IntegratorSetup = 1 )
+# 1 - different cuts for exploration and generation 
+
+UseExplorationCuts = 0
+
+
+
+##Type of the cut:
+# 0 - no cuts; 
+# 1 - RHIC pt_pi, eta_pi; tecm = 200GeV or 500 GeV;
+# 2 - RHIC pt_pi, eta_pi, t1, t2; tecm = 200GeV;
+# 3 - RHIC pt_pi, eta_pi, t1, t2; tecm = 500GeV;
+# 4 - LHC pt_pi, eta_pi; tecm = 7TeV, 1st;
+# 5 - LHC pt_pi, eta_pi; tecm = 7TeV, 2nd;
+# 6 - CPS testing, y_pi; 
+# 7 - CPS testing, y_pi, t; 
+# 8 - CPS testing, y_pi, t; different exploration and generation cuts;
+# 9 - no cuts;
+# 10 - no cuts;
+# 11 - testing;
+
+cutType = 11
+
+
+
+###############################################################Histogram configuration
+
+##Postscript filename for histograms
+PsFilename = histograms.ps
+
+##Root file for histograms
+# Run a simple root macro browseHistograms.C for getting access to the file 
+RootFilename = histograms.root
+
+##################################################################Plots for differential XSection
+
+##Postscript filename for XSection histograms
+PsXSectionFilename = diffXsect.ps
+
+##Root file for histograms
+# Run a simple root macro browseHistograms.C for getting access to the file 
+RootXSectionFilename = diffXsect.root
+
+
+

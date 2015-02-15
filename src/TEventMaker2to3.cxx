@@ -1,0 +1,366 @@
+/***********************************************************************
+*                 TEventMaker2to3                                 
+*                                                                           
+* Generates 2 -> 2 + X, where X is a produced particle.                                         
+*		       
+*   									       
+***********************************************************************/
+
+
+#include"TEventMaker2to3.h"
+
+////////////////////////////////////////////////////////////////////////
+
+const double TEventMaker2to3::PI =  M_PI;
+
+////////////////////////////////////////////////////////////////////////
+TEventMaker2to3::TEventMaker2to3()
+{
+	Logger = LoggerSubsystem::Instance();
+  
+  	PDGDatabese = TDatabasePDG::Instance();
+  
+	
+	nopf = 3;
+
+	mass  = new double [nopf+1];
+	idOut = new int[nopf+1];
+	pf = new TLorentzVector [nopf+1];
+    
+	ConfigReader = ConfigReaderSubsystem::Instance();
+	ReadConfigFile( string("Generator.dat") );
+
+	mA = PDGDatabese->GetParticle(idA)->Mass();
+	mB = PDGDatabese->GetParticle(idB)->Mass();
+  
+	///setup CM frame
+	EA = (pow(mA,2) - pow(mB,2) + pow(tecm,2))/(2.0 * tecm);
+	EB = (-pow(mA,2) + pow(mB,2) + pow(tecm,2))/(2.0 *tecm);
+		
+	double pzA = sqrt( EA*EA - mA*mA );
+	double pzB = -sqrt( EB*EB - mB*mB );
+		
+	pb1.SetPxPyPzE( 0.0, 0.0, pzA, EA );
+	pb2.SetPxPyPzE( 0.0, 0.0, pzB, EB );
+
+  
+	//initialize internal structure of the class
+	Initialize();
+  
+};
+
+////////////////////////////////////////////////////////////////////////
+TEventMaker2to3::~TEventMaker2to3(void)
+{
+	   
+	delete [] mass;
+	delete [] idOut;
+
+	delete [] pf;
+   
+  
+};
+
+////////////////////////////////////////////////////////////////////////
+void TEventMaker2to3::ReadConfigFile( const string & filename )
+{
+
+	//Parse variables: setting up model variables	
+	
+	nop = ConfigReader->GetIntValue( "nop" );
+	tecm =  ConfigReader->GetDoubleValue( "tecm" );
+	p_min = ConfigReader->GetDoubleValue( "TEventMaker2to3::p_min" );
+	p_max = ConfigReader->GetDoubleValue( "TEventMaker2to3::p_max" );
+	y_min = ConfigReader->GetDoubleValue( "TEventMaker2to3::y_min" ); 
+	y_max = ConfigReader->GetDoubleValue( "TEventMaker2to3::y_max" ); 
+	weightStrategy = ConfigReader->GetIntValue( "weightStrategy" );	
+	
+	///Reading frame setup
+	frameType = ConfigReader->GetIntValue( string("frameType") );
+	idA = ConfigReader->GetIntValue( string("idA") );
+	idB = ConfigReader->GetIntValue( string("idB") );
+	tecm = ConfigReader->GetDoubleValue( string("tecm") );
+	//boost = ConfigReader->getBoost();	
+	
+	if( nop != 3 )
+	{
+		cout << "TEventMaker2to3:: 3 particles in final state required!" << endl;
+		assert( nop == 3 );
+	}
+
+
+   	//read output particles 
+	int massIndication = ConfigReader->GetIntValue( string("TEventMaker2to3::massIndication") );
+
+	if( massIndication == 1)
+	{
+		ConfigReader->GetDoubleArray( mass, string("TEventMaker2to3::m"), nopf+1, 1 );
+		cout << " mass1 " << mass[1] << " mass2 " << mass[2] << " mass3 " << mass[3] << endl; 
+		
+		for( int i = 1; i < nopf+1; i++ )
+		{
+			idOut[i] = 81; //unkonown particle if mass specified
+		}
+		
+	}
+	else if( massIndication == 0 )
+	{
+		ConfigReader->GetIntArray( idOut, string("TEventMaker2to3::id"), nopf+1, 1 );	
+		
+		for( int i = 1; i < nopf+1; i++ )
+		{
+			mass[i] = PDGDatabese->GetParticle(idOut[i])->Mass();
+		}
+	}
+	else if( massIndication == 2)
+	{
+		ConfigReader->GetDoubleArray( mass, string("TEventMaker2to3::m"), nopf+1, 1 );
+		ConfigReader->GetIntArray( idOut, string("TEventMaker2to3::id"), nopf+1, 1 );
+	}
+ 
+	//Log configuration
+	string ConfigLog = ConfigReader->GetStringValue( string("ConfigLogFile") );
+	TLog * ConfigLogger = new TLog();
+	ConfigLogger->setLogTime( false );
+	ConfigLogger->openLogFile( ConfigLog );
+ 
+	ConfigLogger->Write() << "# " << "-----------" << endl;
+	ConfigLogger->Write() << "# " << "TEventMaker2to3 " << endl;
+	ConfigLogger->Write() << "# " << "-----------" << endl;
+	ConfigLogger->Write() << "nop = " << nop << endl;
+	ConfigLogger->Write() << "TEventMaker2to3::p_min = " << p_min << endl;
+	ConfigLogger->Write() << "TEventMaker2to3::p_max = " << p_max << endl;
+	ConfigLogger->Write() << "TEventMaker2to3::y_min = " << y_min << endl;
+	ConfigLogger->Write() << "TEventMaker2to3::y_max = " << y_max << endl;
+	ConfigLogger->Write() << "weightStrategy = " << weightStrategy << endl;
+	ConfigLogger->Write() << "frameType = " << frameType << endl;
+	ConfigLogger->Write() << "idA = " << idA << endl;
+	ConfigLogger->Write() << "idB = " << idB << endl;
+	ConfigLogger->Write() << "tecm = " << tecm << endl;
+	
+	ConfigLogger->Write() << "TEventMaker2to3::massIndication = " << massIndication << endl;
+	for( int i = 1; i < nopf+1; i++ )
+	{
+			ConfigLogger->Write() <<  "TEventMaker2to3::id" << i << " = " << idOut[i] << endl;
+			ConfigLogger->Write() <<  "TEventMaker2to3::m" << i << " = " << mass[i] << endl;
+	}
+	
+	
+	delete ConfigLogger;
+	
+	return;
+};
+
+////////////////////////////////////////////////////////////////////////
+void TEventMaker2to3::Initialize()
+{ 
+	
+};
+
+////////////////////////////////////////////////////////////////////////
+void TEventMaker2to3::SetEvent(int nDim,double *Xarg)
+{
+	//GENERATE MOMENTA AND RAPIDITIES starting from nDim random numbers
+	// nDim=3*(number of particles)-4
+
+
+	//set up  new generation
+	generationFailed = false;
+
+    double p1t = abs(p_max-p_min)*Xarg[0];
+    double p2t = abs(p_max-p_min)*Xarg[1];
+    double dphi1 = 2.0*PI*Xarg[2];
+    double dphi2 = 2.0*PI*Xarg[3];
+    double y = y_min+(y_max-y_min)*Xarg[4];
+
+	//mass[3] = Xmass;
+ 
+    int isol=1;
+    int r=0; 
+     
+    r = CalculateKinematics(p1t,p2t,dphi1,dphi2,y, isol);
+    if(!r==0)generationFailed=true;
+    
+    return;
+
+};
+
+
+////////////////////////////////////////////////////////////////////////
+int TEventMaker2to3::CalculateKinematics(double p1t, double p2t, double dphi1, double dphi2, double y, int isol)
+{
+  TLorentzVector p1,p2,p3;
+
+    //   four-momenta of the initial nucleons;
+    //   ------------------------------------;
+    double s=tecm*tecm;
+    TVector2 pp1;
+    pp1.SetMagPhi(p1t,dphi1);
+    TVector2 pp2;
+    pp2.SetMagPhi(p2t,dphi2);
+    //---------------------------------------
+    // third particle
+    TVector2 pp3t = (pp1 + pp2);
+    TVector2 pp3=pp3t.Rotate(PI);
+    double am3t = sqrt( pow(mass[3],2) + pp3.Mod2() );
+
+    double p3_0 = am3t*cosh(y);
+    double p3_z = am3t*sinh(y);
+    if(p3_0>tecm) return 1;
+    //set four momentum of intermediate state (or central particle)
+    p3.SetXYZT(pp3.X(), pp3.Y(), p3_z, p3_0);
+
+
+
+  // solving set of equations for p_{1z} and p_{2z};
+   // a p1z^2 + b p1z + c = 0
+
+	double Em = p3.E();
+    double pmz = p3.Z();
+
+	double m1 = mass[1];
+	double m2 = mass[2];
+
+    //Coefficients of the equation for p1z = x   in  ax^2+bx+c = 0:
+    double a =-4*(pow(Em,2) - pow(pmz,2) - 2*Em*tecm + pow(tecm,2));
+
+    double b = -4*pmz*(pow(Em,2) + pow(m1,2) - pow(m2,2) + pow(p1t,2) - pow(p2t,2) - pow(pmz,2) - 2*Em*tecm + pow(tecm,2));
+
+    double c = pow(Em,4) + pow(m1,4) + pow(m2,4) - 2*pow(m2,2)*pow(p1t,2) + pow(p1t,4) + 2*pow(m2,2)*pow(p2t,2) - 2*pow(p1t,2)*pow(p2t,2) + pow(p2t,4) + 2*pow(m2,2)*pow(pmz,2) - 2*pow(p1t,2)*pow(pmz,2) + 2*pow(p2t,2)*pow(pmz,2) + pow(pmz,4) - 4*pow(Em,3)*tecm - 2*pow(m2,2)*pow(tecm,2) - 2*pow(p1t,2)*pow(tecm,2) - 2*pow(p2t,2)*pow(tecm,2) - 
+			2*pow(pmz,2)*pow(tecm,2) + pow(tecm,4) - 2*pow(Em,2)*(pow(m1,2) + pow(m2,2) + pow(p1t,2) + pow(p2t,2) + pow(pmz,2) - 3*pow(tecm,2)) + 4*Em*tecm*(pow(m1,2) + pow(m2,2) + pow(p1t,2) + pow(p2t,2) + pow(pmz,2) - pow(tecm,2)) - 2*pow(m1,2)*(pow(m2,2) - pow(p1t,2) + pow(p2t,2) + pow(pmz,2) + pow(tecm,2));
+
+    //Delta of the quadratic equation 
+    double Delta = b*b-4.0*a*c;
+
+	//fail of generation
+    if( Delta < 0)
+    {
+    	return 2;
+    };
+
+    //two solutions
+    double p1za = (-b + sqrt(Delta))/(2.0*a);
+    double p1zb = (-b - sqrt(Delta))/(2.0*a);
+
+    double pp1z[2],pp2z[2];
+    double pp10[2],pp20[2];
+
+    //construct full solution
+    pp1z[0] = p1za;
+    pp2z[0] = -(p3.Z()+p1za);
+
+    pp1z[1] = p1zb;
+    pp2z[1] = -(p3.Z()+p1zb);
+
+
+    //transverse mass
+    double am1t2 = sq(mass[1]) + sq(p1t);
+    double am2t2 = sq(mass[2]) + sq(p2t);
+
+    //construct energies
+    pp10[0] = sqrt(am1t2+sq(pp1z[0]));
+    pp10[1] = sqrt(am1t2+sq(pp1z[1]));
+
+    pp20[0] = sqrt(am2t2+sq(pp2z[0]));
+    pp20[1] = sqrt(am2t2+sq(pp2z[1]));
+
+    assert( isol <2 && isol >=0 );
+
+
+    double p1testz = pp1z[isol];		
+    double p2testz = pp2z[isol];		
+
+    double energy1 = sqrt(am1t2+sq(p1testz));
+    double energy2 = sqrt(am2t2+sq(p2testz));
+
+    double esum = energy1+energy2+p3_0;
+
+    if(fabs(esum-tecm)>0.001)
+		return 3;
+    
+    p1.SetXYZT(pp1.X(), pp1.Y(), pp1z[isol], pp10[isol]); 
+    p2.SetXYZT(pp2.X(), pp2.Y(), pp2z[isol], pp20[isol]);
+    TLorentzVector p13,p23;
+    p13 = p1+p3;
+    p23 = p2+p3;
+
+    if( p13.M2() > s ) {
+		return 4;
+		cout << " return 4 " << endl;}
+    
+    if( p23.M2() > s ) {
+		return 6;
+		cout << " return 6 " << endl;}
+
+	
+	pf[1]=p1;
+	pf[2]=p2;
+        pf[3]=p3;
+	if( pb1.Z()*p1.Z() < 0 || pb2.Z()*p2.Z() < 0  ) return 7;
+   return 0;
+
+};
+
+////////////////////////////////////////////////////////////////////////
+double TEventMaker2to3::kcms(double s, double m1, double m2)
+{
+  // momentum in cms of systme of particles with masses m1, m2
+  double m12=m1*m1;
+  double m22=m2*m2;
+  double temp= sqrt(pow((s-m12-m22),2)-4.0*m12*m22)/2.0/sqrt(s);
+  return temp;
+
+};
+
+////////////////////////////////////////////////////////////////////////
+double TEventMaker2to3::SetEvent( int nDim, double *Xarg, TEvent * event )
+{
+	SetEvent( nDim, Xarg );
+
+    event->pb[1] = pb1;
+    event->pbInfo[1] = PDGDatabese->GetParticle( idA );
+    event->pb[2] = pb2;
+    event->pbInfo[2] = PDGDatabese->GetParticle( idB );
+    
+    for( int i=1; i < nopf+1; i++ )
+    {
+		 event->pf[i] = pf[i];
+		 event->pfInfo[i] = PDGDatabese->GetParticle( idOut[i] );
+	}	 
+	
+	
+	//generate weight 
+	
+	double norm3=pow( 2.0 * PI, -5 )*pow(2,-3);//normalization factors for 3-body phase-space
+	  
+	double wt = 0.0;
+	
+	
+	if ( false == generationFailed )
+	{
+	 double jacob_rndm_3= abs(p_max-p_min)*abs(p_max-p_min) *pow(2*PI,2)*(y_max-y_min);//transformation for random variables (from unit-box)
+         double jacobinv_phs = fabs( pf[1].Z()/pf[1].E() - pf[2].Z()/pf[2].E());// inverse jacobian for change of phase-space variables
+         double jacob3 = jacob_rndm_3/jacobinv_phs;
+         
+		 double flux = 2.0*tecm*tecm;
+		 wt = 1.0/flux; // flux included into phase space weight
+				
+		 double wt3 = jacob3*norm3*pf[1].Pt()*pf[2].Pt()/pf[1].E()/pf[2].E();
+		 wt *= wt3;
+		
+	}
+	else //generation failed
+	{
+		wt   = 0.0;
+	}
+	
+	return( wt );
+	
+};
+
+////////////////////////////////////////////////////////////////////////
+bool TEventMaker2to3::isGenerationFailed( void )
+{
+	
+	return( generationFailed );
+};

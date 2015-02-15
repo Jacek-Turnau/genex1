@@ -1,0 +1,9 @@
+#Confuguration file with identity matrix
+
+#testing eventGenerationStrategy = 3
+#nip = 2
+#nop = 3
+
+#testing eventGenerationStrategy = 2
+nip = 2
+nop = 4

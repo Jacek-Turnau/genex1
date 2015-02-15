@@ -1,0 +1,9 @@
+#Confuguration file with identity matrix
+
+
+
+###Matrix element parameters
+
+GaussPt::Alpha = 1.0
+GaussPt::Norm = 1.0
+
